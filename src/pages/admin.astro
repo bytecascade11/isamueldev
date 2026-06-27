@@ -1,0 +1,540 @@
+import { useState, useEffect } from "react";
+
+const STORAGE_KEY = "cms_posts";
+
+const slugify = (text) =>
+  text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-");
+
+const generateFrontmatter = (post) => {
+  return `---
+title: "${post.title}"
+slug: "${post.slug}"
+date: "${new Date().toISOString().split("T")[0]}"
+tags: [${post.tags
+    .split(",")
+    .map((t) => `"${t.trim()}"`)
+    .join(", ")}]
+excerpt: "${post.excerpt}"
+coverImage: "${post.coverImage}"
+published: ${post.published}
+---
+
+${post.content}`;
+};
+
+const emptyPost = {
+  id: null,
+  title: "",
+  slug: "",
+  tags: "",
+  excerpt: "",
+  coverImage: "",
+  content: "",
+  published: false,
+};
+
+export default function CMSDashboard() {
+  const [posts, setPosts] = useState([]);
+  const [view, setView] = useState("list"); // list | editor | preview
+  const [form, setForm] = useState(emptyPost);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) setPosts(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const savePosts = (updated) => {
+    setPosts(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  };
+
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleNew = () => {
+    setForm({ ...emptyPost, id: Date.now() });
+    setPreviewMode(false);
+    setView("editor");
+  };
+
+  const handleEdit = (post) => {
+    setForm(post);
+    setPreviewMode(false);
+    setView("editor");
+  };
+
+  const handleChange = (field, value) => {
+    setForm((prev) => {
+      const updated = { ...prev, [field]: value };
+      if (field === "title" && !prev.slug) {
+        updated.slug = slugify(value);
+      }
+      return updated;
+    });
+  };
+
+  const handleSave = (publish = false) => {
+    if (!form.title.trim()) {
+      showToast("Title is required.", "error");
+      return;
+    }
+    const updated = { ...form, published: publish };
+    const exists = posts.find((p) => p.id === updated.id);
+    const newList = exists
+      ? posts.map((p) => (p.id === updated.id ? updated : p))
+      : [...posts, updated];
+    savePosts(newList);
+    setForm(updated);
+    showToast(publish ? "Post published!" : "Draft saved.");
+  };
+
+  const handleDelete = (id) => {
+    if (!confirm("Delete this post?")) return;
+    savePosts(posts.filter((p) => p.id !== id));
+    showToast("Post deleted.");
+    if (view === "editor") setView("list");
+  };
+
+  const handleDownload = (post) => {
+    const content = generateFrontmatter(post);
+    const blob = new Blob([content], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${post.slug || "post"}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Markdown file downloaded.");
+  };
+
+  const renderMarkdown = (text) => {
+    return text
+      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+      .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+      .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/`(.+?)`/g, "<code>$1</code>")
+      .replace(/\n/g, "<br>");
+  };
+
+  const styles = {
+    root: {
+      fontFamily: "'Inter', 'Segoe UI', sans-serif",
+      background: "#0f1117",
+      minHeight: "100vh",
+      color: "#e2e8f0",
+    },
+    sidebar: {
+      width: 220,
+      background: "#161b27",
+      borderRight: "1px solid #1e2535",
+      display: "flex",
+      flexDirection: "column",
+      padding: "24px 0",
+      position: "fixed",
+      top: 0,
+      left: 0,
+      height: "100vh",
+    },
+    logo: {
+      padding: "0 20px 24px",
+      borderBottom: "1px solid #1e2535",
+      marginBottom: 16,
+    },
+    logoText: {
+      fontSize: 13,
+      fontWeight: 700,
+      letterSpacing: "0.12em",
+      textTransform: "uppercase",
+      color: "#7c8cf8",
+    },
+    logoSub: { fontSize: 11, color: "#4a5568", marginTop: 2 },
+    navBtn: (active) => ({
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      padding: "10px 20px",
+      background: active ? "#1e2535" : "transparent",
+      border: "none",
+      color: active ? "#e2e8f0" : "#718096",
+      fontSize: 13,
+      fontWeight: active ? 600 : 400,
+      cursor: "pointer",
+      width: "100%",
+      textAlign: "left",
+      borderLeft: active ? "2px solid #7c8cf8" : "2px solid transparent",
+    }),
+    main: {
+      marginLeft: 220,
+      padding: "32px 40px",
+      maxWidth: 900,
+    },
+    header: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 28,
+    },
+    pageTitle: { fontSize: 20, fontWeight: 700, color: "#f1f5f9" },
+    btn: (variant = "primary") => ({
+      padding: "8px 16px",
+      borderRadius: 6,
+      border: "none",
+      fontSize: 13,
+      fontWeight: 600,
+      cursor: "pointer",
+      background:
+        variant === "primary"
+          ? "#7c8cf8"
+          : variant === "danger"
+          ? "#e53e3e"
+          : variant === "ghost"
+          ? "transparent"
+          : "#1e2535",
+      color:
+        variant === "ghost" ? "#718096" : "#fff",
+      border: variant === "ghost" ? "1px solid #2d3748" : "none",
+    }),
+    postCard: {
+      background: "#161b27",
+      border: "1px solid #1e2535",
+      borderRadius: 8,
+      padding: "16px 20px",
+      marginBottom: 12,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    badge: (published) => ({
+      fontSize: 11,
+      fontWeight: 600,
+      padding: "2px 8px",
+      borderRadius: 20,
+      background: published ? "#1a4731" : "#2d2a1e",
+      color: published ? "#68d391" : "#ecc94b",
+      letterSpacing: "0.05em",
+    }),
+    field: {
+      marginBottom: 20,
+    },
+    label: {
+      display: "block",
+      fontSize: 12,
+      fontWeight: 600,
+      color: "#718096",
+      marginBottom: 6,
+      letterSpacing: "0.06em",
+      textTransform: "uppercase",
+    },
+    input: {
+      width: "100%",
+      padding: "10px 12px",
+      background: "#161b27",
+      border: "1px solid #1e2535",
+      borderRadius: 6,
+      color: "#e2e8f0",
+      fontSize: 14,
+      outline: "none",
+      boxSizing: "border-box",
+    },
+    textarea: {
+      width: "100%",
+      padding: "12px",
+      background: "#161b27",
+      border: "1px solid #1e2535",
+      borderRadius: 6,
+      color: "#e2e8f0",
+      fontSize: 14,
+      fontFamily: "'Fira Code', monospace",
+      lineHeight: 1.7,
+      outline: "none",
+      resize: "vertical",
+      minHeight: 280,
+      boxSizing: "border-box",
+    },
+    row: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 16,
+    },
+    editorActions: {
+      display: "flex",
+      gap: 10,
+      alignItems: "center",
+      flexWrap: "wrap",
+    },
+    previewBox: {
+      background: "#161b27",
+      border: "1px solid #1e2535",
+      borderRadius: 8,
+      padding: 28,
+      lineHeight: 1.8,
+      fontSize: 15,
+      color: "#cbd5e0",
+    },
+    coverPreview: {
+      width: "100%",
+      height: 180,
+      objectFit: "cover",
+      borderRadius: 6,
+      marginBottom: 20,
+      border: "1px solid #1e2535",
+    },
+    toast: (type) => ({
+      position: "fixed",
+      bottom: 28,
+      right: 28,
+      padding: "12px 20px",
+      borderRadius: 8,
+      background: type === "error" ? "#e53e3e" : "#2f855a",
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: 600,
+      zIndex: 999,
+      boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+    }),
+    emptyState: {
+      textAlign: "center",
+      padding: "60px 0",
+      color: "#4a5568",
+    },
+    tabRow: {
+      display: "flex",
+      gap: 0,
+      marginBottom: 20,
+      borderBottom: "1px solid #1e2535",
+    },
+    tab: (active) => ({
+      padding: "8px 18px",
+      fontSize: 13,
+      fontWeight: active ? 600 : 400,
+      color: active ? "#7c8cf8" : "#718096",
+      background: "transparent",
+      border: "none",
+      borderBottom: active ? "2px solid #7c8cf8" : "2px solid transparent",
+      cursor: "pointer",
+      marginBottom: -1,
+    }),
+  };
+
+  return (
+    <div style={styles.root}>
+      {/* Sidebar */}
+      <div style={styles.sidebar}>
+        <div style={styles.logo}>
+          <div style={styles.logoText}>✦ Studio CMS</div>
+          <div style={styles.logoSub}>Astro Blog Admin</div>
+        </div>
+        <button style={styles.navBtn(view === "list")} onClick={() => setView("list")}>
+          📄 All Posts
+        </button>
+        <button style={styles.navBtn(view === "editor" && !form.id)} onClick={handleNew}>
+          ✚ New Post
+        </button>
+      </div>
+
+      {/* Main */}
+      <div style={styles.main}>
+        {/* LIST VIEW */}
+        {view === "list" && (
+          <>
+            <div style={styles.header}>
+              <div style={styles.pageTitle}>All Posts</div>
+              <button style={styles.btn("primary")} onClick={handleNew}>
+                + New Post
+              </button>
+            </div>
+            {posts.length === 0 ? (
+              <div style={styles.emptyState}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📝</div>
+                <div>No posts yet. Create your first one.</div>
+              </div>
+            ) : (
+              posts.map((post) => (
+                <div key={post.id} style={styles.postCard}>
+                  <div>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>{post.title || "Untitled"}</div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={styles.badge(post.published)}>
+                        {post.published ? "Published" : "Draft"}
+                      </span>
+                      <span style={{ fontSize: 12, color: "#4a5568" }}>/{post.slug}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={styles.btn("ghost")} onClick={() => handleEdit(post)}>Edit</button>
+                    <button style={styles.btn("secondary")} onClick={() => handleDownload(post)}>↓ MD</button>
+                    <button style={styles.btn("danger")} onClick={() => handleDelete(post.id)}>Delete</button>
+                  </div>
+                </div>
+              ))
+            )}
+          </>
+        )}
+
+        {/* EDITOR VIEW */}
+        {view === "editor" && (
+          <>
+            <div style={styles.header}>
+              <div style={styles.pageTitle}>
+                {form.id && posts.find((p) => p.id === form.id) ? "Edit Post" : "New Post"}
+              </div>
+              <button style={styles.btn("ghost")} onClick={() => setView("list")}>
+                ← Back
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div style={styles.tabRow}>
+              <button style={styles.tab(!previewMode)} onClick={() => setPreviewMode(false)}>Write</button>
+              <button style={styles.tab(previewMode)} onClick={() => setPreviewMode(true)}>Preview</button>
+            </div>
+
+            {!previewMode ? (
+              <>
+                <div style={styles.field}>
+                  <label style={styles.label}>Title</label>
+                  <input
+                    style={styles.input}
+                    value={form.title}
+                    placeholder="Your post title..."
+                    onChange={(e) => handleChange("title", e.target.value)}
+                  />
+                </div>
+
+                <div style={styles.row}>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Slug</label>
+                    <input
+                      style={styles.input}
+                      value={form.slug}
+                      placeholder="auto-generated-from-title"
+                      onChange={(e) => handleChange("slug", slugify(e.target.value))}
+                    />
+                  </div>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Tags (comma-separated)</label>
+                    <input
+                      style={styles.input}
+                      value={form.tags}
+                      placeholder="gaming, guide, eFootball"
+                      onChange={(e) => handleChange("tags", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.field}>
+                  <label style={styles.label}>Excerpt</label>
+                  <input
+                    style={styles.input}
+                    value={form.excerpt}
+                    placeholder="Short description for SEO and post cards..."
+                    onChange={(e) => handleChange("excerpt", e.target.value)}
+                  />
+                </div>
+
+                <div style={styles.field}>
+                  <label style={styles.label}>Cover Image URL</label>
+                  <input
+                    style={styles.input}
+                    value={form.coverImage}
+                    placeholder="https://..."
+                    onChange={(e) => handleChange("coverImage", e.target.value)}
+                  />
+                </div>
+
+                <div style={styles.field}>
+                  <label style={styles.label}>Content (Markdown)</label>
+                  <textarea
+                    style={styles.textarea}
+                    value={form.content}
+                    placeholder="Write your post in Markdown..."
+                    onChange={(e) => handleChange("content", e.target.value)}
+                  />
+                </div>
+              </>
+            ) : (
+              <div style={styles.previewBox}>
+                {form.coverImage && (
+                  <img src={form.coverImage} alt="Cover" style={styles.coverPreview} />
+                )}
+                <h1 style={{ fontSize: 24, fontWeight: 700, color: "#f1f5f9", marginBottom: 8 }}>
+                  {form.title || "Untitled Post"}
+                </h1>
+                {form.tags && (
+                  <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+                    {form.tags.split(",").map((t) => (
+                      <span key={t} style={{ ...styles.badge(true), fontSize: 11 }}>{t.trim()}</span>
+                    ))}
+                  </div>
+                )}
+                {form.excerpt && (
+                  <p style={{ color: "#718096", fontStyle: "italic", marginBottom: 20, borderLeft: "3px solid #7c8cf8", paddingLeft: 12 }}>
+                    {form.excerpt}
+                  </p>
+                )}
+                <div
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(form.content || "_No content yet._") }}
+                />
+              </div>
+            )}
+
+            <div style={{ ...styles.editorActions, marginTop: 24 }}>
+              <button style={styles.btn("ghost")} onClick={() => handleSave(false)}>
+                Save Draft
+              </button>
+              <button style={styles.btn("primary")} onClick={() => handleSave(true)}>
+                Publish Post
+              </button>
+              <button style={styles.btn("secondary")} onClick={() => handleDownload(form)}>
+                ↓ Download .md
+              </button>
+              {posts.find((p) => p.id === form.id) && (
+                <button style={styles.btn("danger")} onClick={() => handleDelete(form.id)}>
+                  Delete
+                </button>
+              )}
+            </div>
+
+            {/* Frontmatter preview */}
+            {(form.title || form.content) && (
+              <div style={{ marginTop: 32 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#4a5568", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Generated Frontmatter
+                </div>
+                <pre style={{
+                  background: "#0d1117",
+                  border: "1px solid #1e2535",
+                  borderRadius: 6,
+                  padding: 16,
+                  fontSize: 12,
+                  color: "#7c8cf8",
+                  overflowX: "auto",
+                  fontFamily: "'Fira Code', monospace",
+                  lineHeight: 1.6,
+                }}>
+                  {generateFrontmatter(form)}
+                </pre>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+ src/pages/admin.astro     {/* Toast */}
+      {toast && <div style={styles.toast(toast.type)}>{toast.msg}</div>}
+    </div>
+  );
+}
+
