@@ -1,8 +1,5 @@
 {
   "trailingSlash": true,
-  "images": {
-    "minimumCacheTTL": 60
-  },
   "headers": [
     {
       "source": "/sw.js",
