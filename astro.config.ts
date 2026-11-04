@@ -2,7 +2,7 @@ import { defineConfig } from "astro/config";
 import tailwind from "@astrojs/tailwind";
 
 export default defineConfig({
-  site: "https://isamueldev.vercel.app",
+  site: "https://www.isamueldev.blog",
   integrations: [
     tailwind(),
   ],
