@@ -2,347 +2,147 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Header from "@components/Header.astro";
 import Footer from "@components/Footer.astro";
-import ShareBar from "@components/ShareBar.astro";
-import BackToTop from "@components/BackToTop.astro";
 import { getCollection } from "astro:content";
-import { SITE } from "@config";
-import ProgressBar from "@components/ProgressBar.astro";
 
-export async function getStaticPaths() {
-  const posts = await getCollection("blog", ({ data }) => !data.draft);
+const allPosts = await getCollection("blog", ({ data }) => !data.draft);
 
-  return posts.map((post) => ({
-    params: { slug: post.slug },
-    props: { post },
-  }));
-}
-
-const { post } = Astro.props;
-const { Content, headings, remarkPluginFrontmatter } = await post.render();
-
-const allPosts = await getCollection(
-  "blog",
-  ({ data }) => !data.draft
+const sortedPosts = allPosts.sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
 );
 
-// Reading time
-const readingTime =
-  remarkPluginFrontmatter?.readingTime ??
-  Math.ceil((post.body?.split(/\s+/)?.length ?? 0) / 200);
-
-// Related posts
-const relatedPosts = allPosts
-  .filter(
-    (p) =>
-      p.slug !== post.slug &&
-      p.data.tags?.length > 0 &&
-      post.data.tags?.length > 0 &&
-      p.data.tags.some((tag) => post.data.tags.includes(tag))
-  )
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
-  .slice(0, 3);
-
-const formattedDate = new Intl.DateTimeFormat("en-US", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-}).format(post.data.date);
-
-const siteUrl = Astro.site?.toString() ?? SITE.url;
-
-const postUrl = new URL(
-  `/blog/${post.slug}/`,
-  siteUrl
-).toString();
-
-// TOC
-const tocHeadings = headings.filter(
-  (h) => h.depth === 2 || h.depth === 3
-);
+const heroPost = sortedPosts[0];
+const recentPosts = sortedPosts.slice(1, 7);
 ---
 
-<BaseLayout
-  title={post.data.title}
-  description={post.data.description}
-  image={post.data.cover}
->
-<ProgressBar />
+<BaseLayout title="MyBlog — A Fast Tech Blog">
   <Header slot="header" />
 
-  <article class="max-w-2xl mx-auto">
-
-    <!-- Breadcrumbs -->
-    <nav aria-label="Breadcrumb" class="mb-8">
-      <ol class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
-        <li>
-          <a href="/" class="hover:text-accent-500 transition-colors">
-            Home
-          </a>
-        </li>
-
-        <li class="text-gray-300 dark:text-gray-600">/</li>
-
-        <li>
-          <a href="/blog/" class="hover:text-accent-500 transition-colors">
-            Blog
-          </a>
-        </li>
-
-        {post.data.tags?.[0] && (
-          <>
-            <li class="text-gray-300 dark:text-gray-600">/</li>
-
-            <li>
-              <a
-                href={`/tags/${post.data.tags[0]}/`}
-                class="hover:text-accent-500 transition-colors"
-              >
-                {post.data.tags[0]}
-              </a>
-            </li>
-          </>
+  <!-- HERO: Latest Post -->
+  {heroPost && (
+    <section class="mb-12">
+      <a
+        href={`/blog/${heroPost.slug}`}
+        class="group block rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 hover:border-accent-500 transition-all duration-300 hover:shadow-xl hover:shadow-accent-500/10"
+      >
+        {heroPost.data.cover ? (
+          <div class="relative w-full h-72 sm:h-96 overflow-hidden">
+            <img
+              src={heroPost.data.cover}
+              alt={heroPost.data.title}
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="eager"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            <div class="absolute bottom-0 left-0 right-0 p-6">
+              <div class="flex flex-wrap gap-2 mb-3">
+                {heroPost.data.tags.map(tag => (
+                  <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-accent-500/90 text-white">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <h1 class="text-2xl sm:text-3xl font-bold text-white leading-snug mb-2">
+                {heroPost.data.title}
+              </h1>
+              <p class="text-gray-300 text-sm line-clamp-2">
+                {heroPost.data.description}
+              </p>
+              <div class="mt-3 text-xs text-gray-400">
+                {heroPost.data.author} · {new Intl.DateTimeFormat("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                }).format(heroPost.data.date)}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div class="p-8">
+            <h1 class="text-3xl font-bold mb-3 group-hover:text-accent-500 transition-colors">
+              {heroPost.data.title}
+            </h1>
+            <p class="text-gray-500 dark:text-gray-400">
+              {heroPost.data.description}
+            </p>
+          </div>
         )}
+      </a>
+    </section>
+  )}
 
-        <li class="text-gray-300 dark:text-gray-600">/</li>
+  <!-- RECENT POSTS -->
+  {recentPosts.length > 0 && (
+    <section class="mb-10">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-sm font-semibold uppercase tracking-widest text-accent-500">
+          Recent Posts
+        </h2>
+      </div>
 
-        <li class="text-gray-900 dark:text-gray-100 font-medium line-clamp-1 max-w-xs">
-          {post.data.title}
-        </li>
-      </ol>
-    </nav>
-
-    <!-- Breadcrumb JSON-LD -->
-    <script
-      type="application/ld+json"
-      set:html={JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "Home",
-            item: siteUrl,
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "Blog",
-            item: new URL("/blog/", siteUrl).toString(),
-          },
-          ...(post.data.tags?.[0]
-            ? [
-                {
-                  "@type": "ListItem",
-                  position: 3,
-                  name: post.data.tags[0],
-                  item: new URL(
-                    `/tags/${post.data.tags[0]}/`,
-                    siteUrl
-                  ).toString(),
-                },
-              ]
-            : []),
-          {
-            "@type": "ListItem",
-            position: post.data.tags?.[0] ? 4 : 3,
-            name: post.data.title,
-            item: postUrl,
-          },
-        ],
-      })}
-    />
-
-    <!-- Tags -->
-    {post.data.tags?.length > 0 && (
-      <div class="flex flex-wrap gap-2 mb-4">
-        {post.data.tags.map((tag) => (
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {recentPosts.map(post => (
           <a
-            href={`/tags/${tag}/`}
-            class="text-xs font-medium px-2 py-0.5 rounded-full bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 hover:bg-accent-200 transition-colors"
+            href={`/blog/${post.slug}`}
+            class="group flex gap-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-accent-500 transition-all duration-300 p-3 hover:shadow-lg hover:shadow-accent-500/10"
           >
-            #{tag}
+            {post.data.cover ? (
+              <div class="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-lg overflow-hidden">
+                <img
+                  src={post.data.cover}
+                  alt={post.data.title}
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
+              </div>
+            ) : (
+              <div class="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            )}
+
+            <div class="flex flex-col justify-between py-1 min-w-0">
+              <div>
+                {post.data.tags.length > 0 && (
+                  <div class="flex flex-wrap gap-1 mb-1">
+                    {post.data.tags.slice(0, 2).map(tag => (
+                      <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <h3 class="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-accent-500 transition-colors">
+                  {post.data.title}
+                </h3>
+              </div>
+              <time class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                {new Intl.DateTimeFormat("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                }).format(post.data.date)}
+              </time>
+            </div>
           </a>
         ))}
       </div>
-    )}
+    </section>
+  )}
 
-    <!-- Title -->
-    <h1 class="text-3xl font-bold leading-tight mb-4">
-      {post.data.title}
-    </h1>
+  <!-- VIEW MORE -->
+  <div class="text-center mb-12">
+    <a
+      href="/"
+      class="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:border-accent-500 hover:text-accent-500 transition-all duration-200"
+    >
+      View All Posts
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+      </svg>
+    </a>
+  </div>
 
-    <!-- Meta -->
-    <div class="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mb-8 pb-8 border-b border-gray-200 dark:border-gray-800">
-      <span>{post.data.author}</span>
-
-      <span>·</span>
-
-      <time datetime={post.data.date.toISOString()}>
-        {formattedDate}
-      </time>
-
-      <span>·</span>
-
-      <span>{readingTime} min read</span>
-    </div>
-
-    <!-- Share -->
-    <div class="py-4 mb-6 border-t border-b border-gray-200 dark:border-gray-800">
-      <ShareBar title={post.data.title} url={postUrl} />
-    </div>
-
-    <!-- Cover -->
-    {post.data.cover && (
-      <img
-        src={post.data.cover}
-        alt={post.data.title}
-        class="w-full rounded-xl mb-8 object-cover max-h-96"
-        loading="eager"
-        width="1200"
-        height="630"
-      />
-    )}
-
-    <!-- Article JSON-LD -->
-    <script
-      type="application/ld+json"
-      set:html={JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "BlogPosting",
-        headline: post.data.title,
-        description: post.data.description,
-
-        image: post.data.cover
-          ? post.data.cover.startsWith("http")
-            ? post.data.cover
-            : new URL(post.data.cover, siteUrl).toString()
-          : new URL(SITE.ogImage, siteUrl).toString(),
-
-        author: {
-          "@type": "Person",
-          name: post.data.author,
-          url: siteUrl,
-        },
-
-        publisher: {
-          "@type": "Organization",
-          name: SITE.name,
-          url: siteUrl,
-        },
-
-        datePublished: post.data.date.toISOString(),
-
-        dateModified: post.data.updated
-          ? new Date(post.data.updated).toISOString()
-          : post.data.date.toISOString(),
-
-        mainEntityOfPage: {
-          "@type": "WebPage",
-          "@id": postUrl,
-        },
-
-        keywords: post.data.tags?.join(", ") ?? "",
-
-        url: postUrl,
-      })}
-    />
-
-    <!-- TOC -->
-    {tocHeadings.length > 2 && (
-      <nav
-        aria-label="Table of Contents"
-        class="mb-8 p-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900"
-      >
-        <h2 class="text-sm font-semibold uppercase tracking-widest text-accent-500 mb-4">
-          Table of Contents
-        </h2>
-
-        <ul class="space-y-2">
-          {tocHeadings.map((heading) => (
-            <li class={heading.depth === 3 ? "ml-4" : ""}>
-              <a
-                href={`#${heading.slug}`}
-                class="text-sm text-gray-600 dark:text-gray-400 hover:text-accent-500 transition-colors"
-              >
-                {heading.text}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    )}
-
-    <!-- Content -->
-<div class="prose prose-gray dark:prose-invert max-w-none mb-12">
-  <Content />
-</div>
-
-<!-- Wrap tables for scroll -->
-<script is:inline>
-  document.addEventListener('DOMContentLoaded', function() {
-    const tables = document.querySelectorAll('.prose table');
-    tables.forEach(table => {
-      if (!table.parentElement.classList.contains('table-wrapper')) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'table-wrapper';
-        table.parentNode.insertBefore(wrapper, table);
-        wrapper.appendChild(table);
-      }
-    });
-  });
-</script>
-
-    <!-- Related Posts -->
-    {relatedPosts.length > 0 && (
-      <aside class="mb-12">
-        <h2 class="text-sm font-semibold uppercase tracking-widest text-accent-500 mb-6">
-          Related Posts
-        </h2>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {relatedPosts.map((related) => (
-            <a
-              href={`/blog/${related.slug}/`}
-              class="group rounded-xl border border-gray-200 dark:border-gray-800 hover:border-accent-500 transition-all duration-300 overflow-hidden"
-            >
-              {related.data.cover ? (
-                <div class="h-32 overflow-hidden">
-                  <img
-                    src={related.data.cover}
-                    alt={related.data.title}
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                    width="400"
-                    height="200"
-                  />
-                </div>
-              ) : (
-                <div class="h-32 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                  No Image
-                </div>
-              )}
-
-              <div class="p-3">
-                <h3 class="text-sm font-semibold line-clamp-2 group-hover:text-accent-500 transition-colors">
-                  {related.data.title}
-                </h3>
-
-                <time class="text-xs text-gray-400 mt-1 block">
-                  {new Intl.DateTimeFormat("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  }).format(related.data.date)}
-                </time>
-              </div>
-            </a>
-          ))}
-        </div>
-      </aside>
-    )}
-  </article>
-
-  <BackToTop />
   <Footer slot="footer" />
 </BaseLayout>
