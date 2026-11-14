@@ -71,20 +71,12 @@ const tocHeadings = headings.filter(
 
   <article class="max-w-2xl mx-auto">
 
-    <!-- Breadcrumbs -->
+    <!-- Breadcrumbs: Home (/) → Post -->
     <nav aria-label="Breadcrumb" class="mb-8">
       <ol class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
         <li>
           <a href="/" class="hover:text-accent-500 transition-colors">
             Home
-          </a>
-        </li>
-
-        <li class="text-gray-300 dark:text-gray-600">/</li>
-
-        <li>
-          <a href="/blog/" class="hover:text-accent-500 transition-colors">
-            Blog
           </a>
         </li>
 
@@ -124,17 +116,11 @@ const tocHeadings = headings.filter(
             name: "Home",
             item: siteUrl,
           },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "Blog",
-            item: new URL("/blog/", siteUrl).toString(),
-          },
           ...(post.data.tags?.[0]
             ? [
                 {
                   "@type": "ListItem",
-                  position: 3,
+                  position: 2,
                   name: post.data.tags[0],
                   item: new URL(
                     `/tags/${post.data.tags[0]}/`,
@@ -145,7 +131,7 @@ const tocHeadings = headings.filter(
             : []),
           {
             "@type": "ListItem",
-            position: post.data.tags?.[0] ? 4 : 3,
+            position: post.data.tags?.[0] ? 3 : 2,
             name: post.data.title,
             item: postUrl,
           },
@@ -274,24 +260,24 @@ const tocHeadings = headings.filter(
     )}
 
     <!-- Content -->
-<div class="prose prose-gray dark:prose-invert max-w-none mb-12">
-  <Content />
-</div>
+    <div class="prose prose-gray dark:prose-invert max-w-none mb-12">
+      <Content />
+    </div>
 
-<!-- Wrap tables for scroll -->
-<script is:inline>
-  document.addEventListener('DOMContentLoaded', function() {
-    const tables = document.querySelectorAll('.prose table');
-    tables.forEach(table => {
-      if (!table.parentElement.classList.contains('table-wrapper')) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'table-wrapper';
-        table.parentNode.insertBefore(wrapper, table);
-        wrapper.appendChild(table);
-      }
-    });
-  });
-</script>
+    <!-- Wrap tables for scroll -->
+    <script is:inline>
+      document.addEventListener('DOMContentLoaded', function() {
+        const tables = document.querySelectorAll('.prose table');
+        tables.forEach(table => {
+          if (!table.parentElement.classList.contains('table-wrapper')) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'table-wrapper';
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+          }
+        });
+      });
+    </script>
 
     <!-- Related Posts -->
     {relatedPosts.length > 0 && (
