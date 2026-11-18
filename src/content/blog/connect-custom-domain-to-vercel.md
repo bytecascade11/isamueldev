@@ -1,7 +1,7 @@
 ---
 title: "How to Connect a Custom Domain to Vercel (Step by Step, Even From Your Phone)"
 description: "Connect your own domain to a Vercel project using A and CNAME records or Vercel nameservers. Includes DNS tables, fixes for common errors, and an FAQ."
-date: 2026-11-18
+date: 2026-11-18T06:30:00
 author: iSamuel 
 tags:
   - vercel
