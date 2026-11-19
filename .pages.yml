@@ -1,0 +1,26 @@
+media:
+  input: public/assets
+  output: /assets
+content:
+  - name: posts
+    label: Posts
+    type: collection
+    path: src/data/blog
+    filename: "{primary}.md"
+    format: yaml-frontmatter
+    view:
+      fields: [title, pubDatetime]
+      primary: title
+      sort: [pubDatetime]
+      default:
+        sort: pubDatetime
+        order: desc
+    fields:
+      - { name: title, label: Title, type: string }
+      - { name: description, label: Description, type: text }
+      - { name: pubDatetime, label: Published, type: date, options: { time: true } }
+      - { name: modDatetime, label: Modified, type: date, options: { time: true } }
+      - { name: featured, label: Featured, type: boolean }
+      - { name: draft, label: Draft, type: boolean }
+      - { name: tags, label: Tags, type: string, list: true }
+      - { name: body, label: Content, type: rich-text }
