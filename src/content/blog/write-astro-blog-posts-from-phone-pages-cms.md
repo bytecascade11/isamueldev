@@ -10,6 +10,7 @@ tags:
   - cms
   - mobile
 cover: /assets/posts/write-astro-blog-posts-pages-cms-cover.jpg
+alt: Pages CMS dashboard on a phone showing the Posts collection with a list of Astro blog posts
 author: iSamuel
 featured: true
 draft: false
@@ -18,7 +19,7 @@ Editing Markdown files through GitHub's web editor works, but it gets tiring fas
 
 This guide shows how I set up Pages CMS on an Astro blog, using only a phone. It covers the config file, how to match it to your Astro schema, how drafts really work, and what to do when something breaks.
 
-<!-- Screenshot: Pages CMS dashboard open on your phone showing the Posts collection -->
+![Pages CMS dashboard on a phone showing the Posts collection with a list of Astro blog posts](/assets/posts/pages-cms-posts-dashboard.jpg)
 
 ## Before you start
 
