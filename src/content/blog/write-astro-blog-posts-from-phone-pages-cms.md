@@ -9,7 +9,7 @@ tags:
   - astro
   - cms
   - mobile
-cover: /assets/posts/267291.jpg
+cover: /assets/posts/write-astro-blog-posts-pages-cms-cover.jpg
 author: iSamuel
 featured: true
 draft: false
