@@ -3,7 +3,7 @@ title: How to Write Astro Blog Posts From Your Phone With Pages CMS (Step by Ste
 description: Set up Pages CMS on an Astro blog to write Markdown posts from your
   phone. Includes a working .pages.yml, schema matching, drafts and fixes for
   common errors.
-date: 2026-11-19:17:00:00Z
+date: 2026-11-19T17:00:00Z
 updated: 2026-11-19
 tags:
   - astro
